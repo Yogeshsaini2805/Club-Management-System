@@ -6,11 +6,11 @@ echo   Starting Backend + Frontend...
 echo ===================================================
 echo.
 
-:: Start backend in a new window
-start "JECRC Backend" cmd /k "cd /d %~dp0backend && echo [Backend] Starting on http://localhost:8000 && python -m uvicorn main:app --reload || echo [Backend] System python not found, trying absolute path... && \"C:\Users\hp\AppData\Local\Programs\Python\Python313\python.exe\" -m uvicorn main:app --reload"
+:: Start backend in a new window using the dedicated script
+start "JECRC Backend" cmd /c "%~dp0start_backend.bat"
 
-:: Wait a moment for backend to initialize
-timeout /t 3 /nobreak > nul
+:: Wait for backend to fully initialize
+timeout /t 8 /nobreak > nul
 
 :: Start frontend in a new window
 start "JECRC Frontend" cmd /k "cd /d %~dp0club-management && echo [Frontend] Starting on http://localhost:3000 && npm start"
