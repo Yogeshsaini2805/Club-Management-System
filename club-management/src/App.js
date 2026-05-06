@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Components
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+// Layout Components
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 
 // Pages
 import Home from './pages/Home';
@@ -16,8 +16,6 @@ import Events from './pages/Events';
 import ClubDetails from './pages/ClubDetails';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
-
-import './App.css';
 
 const ProtectedRoute = ({ children, requireAdmin }) => {
   const { user, loading } = useAuth();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { Menu, X, LogOut, UserCircle, ChevronDown, Settings } from 'lucide-react';
 import './Navbar.css';
 

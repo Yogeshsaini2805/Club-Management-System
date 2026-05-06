@@ -1,7 +1,21 @@
+"""
+Admin Setup Script
+===================
+Creates or resets the admin user account.
+
+Usage:
+  cd backend
+  python -m scripts.setup_admin
+"""
+
 import sys
-sys.path.append('backend')
-from database import SessionLocal
-import crud, schemas, models
+import os
+
+# Add parent directory (backend/) to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import SessionLocal
+from app import crud, schemas, models
 
 db = SessionLocal()
 user = crud.get_user_by_email(db, 'admin@jecrcu.edu.in')

@@ -28,7 +28,7 @@
 - **React 19** — UI framework
 - **React Router v7** — Client-side routing
 - **Lucide React** — Modern icon library
-- **Vanilla CSS** — Custom design system with CSS variables
+- **Vanilla CSS** — Modular design system with CSS variables
 
 ### Backend
 - **FastAPI** — High-performance Python API framework
@@ -99,44 +99,77 @@ Simply double-click `start.bat` in the project root — it launches both servers
 ```
 Club Management System/
 │
-├── backend/                    # Python FastAPI backend
-│   ├── main.py                 # API routes & app config
-│   ├── models.py               # SQLAlchemy database models
-│   ├── schemas.py              # Pydantic request/response schemas
-│   ├── crud.py                 # Database operations (CRUD)
-│   ├── database.py             # Database connection setup
-│   ├── requirements.txt        # Python dependencies
-│   └── uploads/logos/          # User-uploaded club logos
+├── backend/                        # Python FastAPI backend
+│   ├── main.py                     # Thin entry point (creates app)
+│   ├── requirements.txt            # Python dependencies
+│   ├── uploads/logos/              # User-uploaded images
+│   ├── app/                        # Application package
+│   │   ├── __init__.py             # App factory (create_app)
+│   │   ├── config.py               # Centralized settings
+│   │   ├── database.py             # Database connection
+│   │   ├── models.py               # SQLAlchemy ORM models
+│   │   ├── schemas.py              # Pydantic schemas
+│   │   ├── crud.py                 # Database CRUD operations
+│   │   └── routers/                # API route handlers
+│   │       ├── auth.py             # Authentication endpoints
+│   │       ├── clubs.py            # Club CRUD + applications
+│   │       ├── events.py           # Event CRUD + registrations
+│   │       ├── uploads.py          # File upload endpoint
+│   │       └── users.py            # User profile management
+│   └── scripts/
+│       └── setup_admin.py          # Admin account setup script
 │
-├── club-management/            # React frontend
+├── club-management/                # React frontend
 │   ├── public/
-│   │   └── assets/             # Static images & illustrations
+│   │   └── assets/                 # Static images & illustrations
 │   ├── src/
-│   │   ├── components/         # Reusable UI components
-│   │   │   ├── Navbar.jsx      # Navigation bar
-│   │   │   └── Footer.jsx      # Site footer
+│   │   ├── styles/                 # Modular CSS design system
+│   │   │   ├── variables.css       # Design tokens & CSS variables
+│   │   │   ├── base.css            # Resets & typography
+│   │   │   ├── layout.css          # App container & grid
+│   │   │   ├── components.css      # Buttons, forms, cards, badges
+│   │   │   └── auth.css            # Auth page styles
+│   │   ├── services/
+│   │   │   └── api.js              # Centralized API client
+│   │   ├── hooks/                  # Custom React hooks
+│   │   │   ├── useClubs.js         # Club data fetching
+│   │   │   └── useEvents.js        # Event data fetching
+│   │   ├── utils/
+│   │   │   └── dateUtils.js        # Date formatting helpers
+│   │   ├── components/
+│   │   │   ├── common/             # Shared UI components
+│   │   │   │   ├── Modal.jsx       # Reusable modal overlay
+│   │   │   │   ├── ErrorBanner.jsx # Error display with retry
+│   │   │   │   ├── LoadingSpinner.jsx
+│   │   │   │   └── RegistrationForm.jsx
+│   │   │   ├── layout/             # Layout components
+│   │   │   │   ├── Navbar.jsx      # Navigation bar
+│   │   │   │   └── Footer.jsx      # Site footer
+│   │   │   └── home/               # Home page sub-components
+│   │   │       ├── HeroSection.jsx
+│   │   │       ├── StatsBar.jsx
+│   │   │       ├── FeaturedClubs.jsx
+│   │   │       └── UpcomingEvents.jsx
 │   │   ├── context/
-│   │   │   └── AuthContext.js  # Authentication state management
-│   │   ├── pages/              # Route-level page components
-│   │   │   ├── Home.jsx        # Landing page
-│   │   │   ├── Login.jsx       # Authentication
-│   │   │   ├── Register.jsx    # New user registration
-│   │   │   ├── Clubs.jsx       # Club listing
-│   │   │   ├── Initiations.jsx # Initiations listing
-│   │   │   ├── ClubDetails.jsx # Individual club page
-│   │   │   ├── Events.jsx      # Events listing & registration
-│   │   │   ├── AdminDashboard.jsx # Admin CRUD panel
-│   │   │   └── Profile.jsx     # User profile & settings
-│   │   ├── config.js           # API URL configuration
-│   │   ├── App.js              # Root component & routing
-│   │   └── index.css           # Global design system
-│   └── .env.example            # Environment variable template
+│   │   │   └── AuthContext.js      # Auth state management
+│   │   ├── pages/                  # Route-level pages
+│   │   │   ├── Home.jsx
+│   │   │   ├── Login.jsx
+│   │   │   ├── Register.jsx
+│   │   │   ├── Clubs.jsx
+│   │   │   ├── Initiations.jsx
+│   │   │   ├── ClubDetails.jsx
+│   │   │   ├── Events.jsx
+│   │   │   ├── AdminDashboard.jsx
+│   │   │   └── Profile.jsx
+│   │   ├── config.js               # API URL configuration
+│   │   ├── App.js                  # Root component & routing
+│   │   └── index.css               # Style entry point (imports)
+│   └── .env.example                # Environment variable template
 │
-├── setup_admin.py              # One-time admin account setup script
-├── start.bat                   # One-click startup (Windows)
-├── start_backend.bat           # Backend-only startup
-├── .gitignore                  # Git ignore rules
-└── README.md                   # This file
+├── start.bat                       # One-click startup (Windows)
+├── .gitignore                      # Git ignore rules
+└── README.md                       # This file
 ```
 
 ---

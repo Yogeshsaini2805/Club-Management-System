@@ -1,0 +1,143 @@
+/* ---- Featured Clubs ---- */
+.featured-clubs-section {
+  padding: 6rem 0;
+}
+
+.featured-clubs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 3rem;
+}
+
+.featured-clubs-title {
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.featured-clubs-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+.featured-clubs-link {
+  color: #5c38e6;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.featured-clubs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2.5rem;
+}
+
+/* ---- Club Card ---- */
+.featured-club-card {
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s;
+}
+
+.featured-club-card:hover {
+  transform: translateY(-8px);
+}
+
+.featured-club-header {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.featured-club-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.featured-club-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.featured-club-name {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+
+.featured-club-cover {
+  height: 130px;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.featured-club-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  filter: saturate(1.2);
+}
+
+.featured-club-body {
+  padding: 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.featured-club-desc {
+  color: #475569;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.featured-club-members {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.featured-club-btn {
+  display: block;
+  text-align: center;
+  padding: 0.8rem;
+  color: white;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+
+.featured-club-btn:hover {
+  opacity: 0.9;
+}

@@ -1,0 +1,55 @@
+/* ============================================
+   LAYOUT — App Container, Main Content, Grid
+   ============================================ */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  position: relative;
+  background-color: #ffffff;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(240, 100%, 95%, 1) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(330, 100%, 95%, 1) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, hsla(200, 100%, 95%, 1) 0px, transparent 50%);
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.main-content {
+  flex: 1;
+  padding-top: 100px;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 1;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Backwards compatibility */
+.animated-bg, .shape {
+  display: none;
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1.25rem;
+  }
+}

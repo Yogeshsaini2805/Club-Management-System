@@ -1,0 +1,187 @@
+/* ---- Club Details Page ---- */
+.club-details-page {
+  padding-top: 3rem;
+  padding-bottom: 5rem;
+}
+
+.club-details-back {
+  color: var(--text-secondary);
+  padding: 0;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.club-details-not-found {
+  padding-top: 5rem;
+  text-align: center;
+}
+
+.club-details-not-found .btn {
+  margin-top: 1rem;
+}
+
+/* ---- Card ---- */
+.club-details-card {
+  overflow: visible;
+  padding: 1rem;
+}
+
+.club-details-banner {
+  height: 150px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  position: relative;
+}
+
+.club-details-logo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -60px;
+  left: 2rem;
+  border: 4px solid var(--bg-card);
+  background: #fff;
+  object-fit: cover;
+}
+
+.club-details-body {
+  padding-top: 4.5rem;
+}
+
+.club-details-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.club-details-name {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.club-details-badges {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.club-details-msg {
+  color: var(--danger);
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.club-details-divider {
+  margin: 3rem 0;
+  height: 1px;
+  background: var(--border-light);
+}
+
+/* ---- Grid Layout ---- */
+.club-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 3rem;
+}
+
+.club-details-section-title {
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.club-details-description {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 3rem;
+}
+
+/* ---- Past Events ---- */
+.club-details-events-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.club-details-event-item {
+  padding: 1rem;
+}
+
+.club-details-event-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.club-details-event-meta-text {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ---- Info Panel ---- */
+.club-details-info-panel {
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+}
+
+.club-details-info-title {
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.club-details-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.club-details-info-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.club-details-info-value-lg {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.club-details-info-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.club-details-info-divider {
+  height: 1px;
+  background: var(--border-light);
+}
+
+.club-details-core-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.club-details-email {
+  font-size: 0.8rem;
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .club-details-grid {
+    grid-template-columns: 1fr;
+  }
+}

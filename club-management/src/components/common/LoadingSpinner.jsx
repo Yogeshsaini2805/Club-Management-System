@@ -1,0 +1,17 @@
+/**
+ * LoadingSpinner — Consistent loading indicator
+ */
+
+import React from 'react';
+import './LoadingSpinner.css';
+
+const LoadingSpinner = ({ message = 'Loading...' }) => {
+  return (
+    <div className="loading-spinner-container">
+      <div className="loading-spinner"></div>
+      <p className="loading-spinner-text">{message}</p>
+    </div>
+  );
+};
+
+export default LoadingSpinner;
