@@ -40,6 +40,7 @@ class Club(Base):
 
     events = relationship("Event", back_populates="club")
     applications = relationship("Application", back_populates="club")
+    memories = relationship("ClubMemory", back_populates="club")
     admin = relationship("User")
 
 class Event(Base):
@@ -48,6 +49,7 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     date = Column(String)
+    end_date = Column(String, nullable=True)
     description = Column(Text)
     venue = Column(String, nullable=True)
     type = Column(String) # upcoming, past
@@ -56,6 +58,17 @@ class Event(Base):
     club = relationship("Club", back_populates="events")
     registrations = relationship("EventRegistration", back_populates="event")
 
+class ClubMemory(Base):
+    __tablename__ = "club_memories"
+    id = Column(Integer, primary_key=True, index=True)
+    club_id = Column(Integer, ForeignKey("clubs.id"))
+    club_name = Column(String)  # Stored to avoid JOINs on the global homepage carousel
+    media_url = Column(String)
+    media_type = Column(String) # 'image' or 'video'
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    club = relationship("Club", back_populates="memories")
+
 class Application(Base):
     __tablename__ = "applications"
     id = Column(Integer, primary_key=True, index=True)
@@ -63,6 +76,7 @@ class Application(Base):
     club_id = Column(Integer, ForeignKey("clubs.id"))
     status = Column(String, default="pending") # pending, approved, rejected
     message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User", back_populates="applications")
     club = relationship("Club", back_populates="applications")
@@ -72,7 +86,12 @@ class EventRegistration(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     event_id = Column(Integer, ForeignKey("events.id"))
+    name = Column(String, nullable=True)
+    roll_no = Column(String, nullable=True)
+    branch = Column(String, nullable=True)
+    status = Column(String, default="pending") # pending, approved, rejected
     message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User", back_populates="event_registrations")
     event = relationship("Event", back_populates="registrations")

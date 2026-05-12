@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import './Modal.css';
 
 const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
@@ -19,7 +20,7 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
 
   if (!isOpen) return null;
 
-  return (
+  return ReactDOM.createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-container card glass-panel"
@@ -29,7 +30,8 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = '500px' }) => {
         {title && <h2 className="modal-title">{title}</h2>}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

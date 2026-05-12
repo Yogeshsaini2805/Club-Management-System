@@ -13,14 +13,14 @@ import Modal from '../components/common/Modal';
 import RegistrationForm from '../components/common/RegistrationForm';
 import ErrorBanner from '../components/common/ErrorBanner';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { formatEventDate, getMonthDay, isEventPast } from '../utils/dateUtils';
+import { formatEventDate, formatEventDateCompact, getMonthDay, getEventStatus } from '../utils/dateUtils';
 import './Events.css';
 
 const Events = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState({});
-  const { user, updateUserProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
@@ -80,23 +80,21 @@ const Events = () => {
       return;
     }
     setIsSubmitting(true);
-    // Update profile first if changed
-    if (
-      editProfileData.name !== user.name ||
-      editProfileData.roll_no !== user.roll_no ||
-      editProfileData.branch !== user.branch
-    ) {
-      await updateUserProfile({
-        name: editProfileData.name,
-        roll_no: editProfileData.roll_no,
-        branch: editProfileData.branch
-      });
-    }
+    // Note: We no longer update the user's main profile here.
+    // The custom name, roll_no, and branch are sent directly with the event registration
+    // so a user can register other students without overwriting their own personal details.
     try {
       const res = await fetch(`${API_BASE_URL}/event-registrations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id, event_id: selectedEventId, message: applicationMessage })
+        body: JSON.stringify({
+          user_id: user.id,
+          event_id: selectedEventId,
+          name: editProfileData.name,
+          roll_no: editProfileData.roll_no,
+          branch: editProfileData.branch,
+          message: applicationMessage
+        })
       });
       if (res.ok) {
         setMessages({ ...messages, [selectedEventId]: 'Successfully Registered!' });
@@ -111,6 +109,99 @@ const Events = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Categorize events
+  const upcomingAndLiveEvents = [];
+  const pastEvents = [];
+
+  events.forEach(event => {
+    const status = getEventStatus(event.date, event.end_date);
+    event._status = status; // attach status for rendering logic
+    if (status === 'past') {
+      pastEvents.push(event);
+    } else {
+      // both running and upcoming go here
+      upcomingAndLiveEvents.push(event);
+    }
+  });
+
+  // Sort: Live first, then upcoming (earliest first)
+  upcomingAndLiveEvents.sort((a, b) => {
+    if (a._status === 'running' && b._status !== 'running') return -1;
+    if (a._status !== 'running' && b._status === 'running') return 1;
+    return new Date(a.date) - new Date(b.date);
+  });
+
+  // Sort past events (most recent past first)
+  pastEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const renderEventCard = (event, isPastSection) => {
+    const { month: displayMonth, day: displayDay } = getMonthDay(event.date);
+    const fullDateStr = formatEventDate(event.date);
+    const isMultiDay = event.end_date && event.date.split('T')[0] !== event.end_date.split('T')[0];
+    
+    let dateDisplay = fullDateStr;
+    if (isMultiDay) {
+      dateDisplay = `${formatEventDateCompact(event.date)} - ${formatEventDateCompact(event.end_date)}`;
+    }
+
+    return (
+      <div key={event.id} className={`card glass-panel event-card ${isPastSection ? 'event-past' : ''}`}>
+        <div className="event-date-strip" style={{ background: isPastSection ? 'var(--bg-card-hover)' : 'var(--accent-gradient)' }}>
+          <span className="event-date-day">{displayDay}</span>
+          <span className="event-date-month">{displayMonth}</span>
+        </div>
+        
+        <div className="card-body event-body" style={{ position: 'relative' }}>
+          <div className="event-top">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+                <h3 className={`event-title ${isPastSection ? 'event-title-past' : ''}`} style={{ margin: 0 }}>
+                  {event.title}
+                </h3>
+                {event._status === 'running' && (
+                  <span className="badge-live">
+                    <span className="live-dot"></span> LIVE NOW
+                  </span>
+                )}
+                {isMultiDay && (
+                  <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    Multi-Day
+                  </span>
+                )}
+              </div>
+              <div className="event-meta">
+                <span className="event-meta-item"><Calendar size={16} /> {dateDisplay}</span>
+                {event.venue && (
+                  <span className="event-meta-item event-venue">
+                    <MapPin size={16} /> {event.venue}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <p className="event-description">{event.description}</p>
+          
+          <div className="event-bottom">
+            <div className="event-club-tag">
+              Organized by ID #{event.club_id}
+            </div>
+            
+            {messages[event.id] ? (
+              <span className="status-badge success">{messages[event.id]}</span>
+            ) : isPastSection ? (
+              <span className="status-badge past">Event Ended</span>
+            ) : (
+              <button className="btn btn-primary" onClick={() => openModal(event.id)}>
+                {event._status === 'running' ? 'Join Now' : 'Register'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -129,56 +220,35 @@ const Events = () => {
       ) : events.length === 0 ? (
         <div className="events-empty">No events currently scheduled.</div>
       ) : (
-        <div className="events-list">
-          {events.map(event => {
-            const { month: displayMonth, day: displayDay } = getMonthDay(event.date);
-            const fullDateStr = formatEventDate(event.date);
-            const isPast = isEventPast(event.date);
-
-            return (
-            <div key={event.id} className={`card glass-panel event-card ${isPast ? 'event-past' : ''}`}>
-              <div className="event-date-strip" style={{ background: isPast ? 'var(--bg-card-hover)' : 'var(--accent-gradient)' }}>
-                <span className="event-date-day">{displayDay}</span>
-                <span className="event-date-month">{displayMonth}</span>
+        <>
+          {/* Active & Upcoming Events */}
+          <div style={{ marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'inline-block' }}></span>
+              Live & Upcoming
+            </h2>
+            {upcomingAndLiveEvents.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>No upcoming events at the moment.</p>
+            ) : (
+              <div className="events-list">
+                {upcomingAndLiveEvents.map(e => renderEventCard(e, false))}
               </div>
-              
-              <div className="card-body event-body">
-                <div className="event-top">
-                  <div>
-                    <h3 className={`event-title ${isPast ? 'event-title-past' : ''}`}>{event.title}</h3>
-                    <div className="event-meta">
-                      <span className="event-meta-item"><Calendar size={16} /> {fullDateStr}</span>
-                      {event.venue && (
-                        <span className="event-meta-item event-venue">
-                          <MapPin size={16} /> {event.venue}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`badge ${isPast ? 'badge-secondary' : 'badge-primary'}`}>
-                    {isPast ? 'Past Event' : 'Upcoming'}
-                  </span>
-                </div>
-                
-                <p className="event-description">{event.description}</p>
-                
-                <div className="event-actions">
-                  {messages[event.id] ? (
-                    <span className="event-success">{messages[event.id]}</span>
-                  ) : isPast ? (
-                    <button className="btn btn-secondary" disabled style={{ opacity: 0.5 }}>
-                      Registrations Closed
-                    </button>
-                  ) : (
-                    <button className="btn btn-primary" onClick={() => openModal(event.id)}>
-                      Register Now
-                    </button>
-                  )}
-                </div>
+            )}
+          </div>
+
+          {/* Past Events */}
+          {pastEvents.length > 0 && (
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-muted)', display: 'inline-block' }}></span>
+                Past Events
+              </h2>
+              <div className="events-list">
+                {pastEvents.map(e => renderEventCard(e, true))}
               </div>
             </div>
-          )})}
-        </div>
+          )}
+        </>
       )}
 
       <Modal

@@ -11,6 +11,7 @@ import HeroSection from '../components/home/HeroSection';
 import StatsBar from '../components/home/StatsBar';
 import FeaturedClubs from '../components/home/FeaturedClubs';
 import UpcomingEvents from '../components/home/UpcomingEvents';
+import Glimpses from '../components/home/Glimpses';
 import ErrorBanner from '../components/common/ErrorBanner';
 
 const Home = () => {
@@ -43,6 +44,7 @@ const Home = () => {
       <StatsBar />
       <FeaturedClubs clubs={clubs} />
       <UpcomingEvents events={events} clubs={clubs} />
+      <Glimpses />
     </div>
   );
 };

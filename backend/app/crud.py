@@ -145,3 +145,103 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+def update_application_status(db: Session, application_id: int, new_status: str):
+    """Update an application's status and adjust club member_count accordingly."""
+    db_app = db.query(models.Application).filter(models.Application.id == application_id).first()
+    if not db_app:
+        return None
+    
+    old_status = db_app.status
+    db_app.status = new_status
+    
+    # Adjust member_count on the club
+    db_club = db.query(models.Club).filter(models.Club.id == db_app.club_id).first()
+    if db_club:
+        if new_status == "approved" and old_status != "approved":
+            db_club.member_count = (db_club.member_count or 0) + 1
+        elif old_status == "approved" and new_status != "approved":
+            db_club.member_count = max((db_club.member_count or 1) - 1, 0)
+    
+    db.commit()
+    db.refresh(db_app)
+    return db_app
+
+
+def update_event_registration_status(db: Session, registration_id: int, new_status: str):
+    """Update an event registration's status."""
+    db_reg = db.query(models.EventRegistration).filter(models.EventRegistration.id == registration_id).first()
+    if not db_reg:
+        return None
+    
+    db_reg.status = new_status
+    db.commit()
+    db.refresh(db_reg)
+    return db_reg
+
+
+def get_club_members(db: Session, club_id: int):
+    """Get all approved members of a club."""
+    return db.query(models.Application).filter(
+        models.Application.club_id == club_id,
+        models.Application.status == "approved"
+    ).all()
+
+
+def get_club_event_registrations(db: Session, club_id: int):
+    """Get all event registrations for events belonging to a specific club."""
+    event_ids = [e.id for e in db.query(models.Event).filter(models.Event.club_id == club_id).all()]
+    if not event_ids:
+        return []
+    return db.query(models.EventRegistration).filter(
+        models.EventRegistration.event_id.in_(event_ids)
+    ).all()
+
+
+# --- Club Memories ---
+
+def create_club_memory(db: Session, memory: schemas.ClubMemoryCreate):
+    db_memory = models.ClubMemory(**memory.model_dump())
+    db.add(db_memory)
+    db.commit()
+    db.refresh(db_memory)
+    return db_memory
+
+def get_club_memories(db: Session, club_id: int):
+    return db.query(models.ClubMemory).filter(models.ClubMemory.club_id == club_id).order_by(models.ClubMemory.created_at.desc()).all()
+
+def get_recent_memories(db: Session, limit: int = 15):
+    return db.query(models.ClubMemory).order_by(models.ClubMemory.created_at.desc()).limit(limit).all()
+
+def delete_club_memory(db: Session, memory_id: int):
+    db_memory = db.query(models.ClubMemory).filter(models.ClubMemory.id == memory_id).first()
+    if db_memory:
+        db.delete(db_memory)
+        db.commit()
+        return True
+    return False
+
+def delete_application(db: Session, application_id: int):
+    """Delete a club membership application."""
+    db_app = db.query(models.Application).filter(models.Application.id == application_id).first()
+    if db_app:
+        # If it was approved, decrease club member_count
+        if db_app.status == "approved":
+            db_club = db.query(models.Club).filter(models.Club.id == db_app.club_id).first()
+            if db_club:
+                db_club.member_count = max((db_club.member_count or 1) - 1, 0)
+        
+        db.delete(db_app)
+        db.commit()
+        return True
+    return False
+
+def delete_event_registration(db: Session, registration_id: int):
+    """Delete an event registration."""
+    db_reg = db.query(models.EventRegistration).filter(models.EventRegistration.id == registration_id).first()
+    if db_reg:
+        db.delete(db_reg)
+        db.commit()
+        return True
+    return False

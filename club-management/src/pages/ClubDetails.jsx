@@ -51,6 +51,7 @@ const ClubDetails = () => {
 
   const [pastEvents, setPastEvents] = useState([]);
   const [memberCount, setMemberCount] = useState(0);
+  const [memories, setMemories] = useState([]);
 
   useEffect(() => {
     const fetchOrg = async () => {
@@ -78,7 +79,14 @@ const ClubDetails = () => {
           if (found) {
             setMemberCount(found.member_count || 0);
 
-            try {
+            // Fetch memories
+            fetch(`${API_BASE_URL}/clubs/${found.id}/memories`)
+              .then(res => res.json())
+              .then(data => setMemories(Array.isArray(data) ? data : []))
+              .catch(err => console.error("Failed to load memories", err));
+
+            // Only fetch app status if logged in
+            if (user?.id) {
               const appsRes = await fetch(`${API_BASE_URL}/clubs/${found.id}/applications`);
               if (appsRes.ok) {
                 const clubApps = await appsRes.json();
@@ -87,8 +95,6 @@ const ClubDetails = () => {
                   setApplied(hasApplied);
                 }
               }
-            } catch (appErr) {
-              console.error("Failed to fetch applications", appErr);
             }
           }
         }
@@ -120,17 +126,10 @@ const ClubDetails = () => {
     }
 
     setIsSubmitting(true);
-    if (
-      editProfileData.name !== user.name ||
-      editProfileData.roll_no !== user.roll_no ||
-      editProfileData.branch !== user.branch
-    ) {
-      await updateUserProfile({
-        name: editProfileData.name,
-        roll_no: editProfileData.roll_no,
-        branch: editProfileData.branch
-      });
-    }
+    // Note: We no longer update the user's main profile here.
+    // Club applications are tied to the logged-in user's account.
+    // If we update the profile here, it could overwrite the user's details if they
+    // accidentally enter someone else's name while testing.
     try {
       const res = await fetch(`${API_BASE_URL}/applications`, {
         method: 'POST',
@@ -316,6 +315,36 @@ const ClubDetails = () => {
               </div>
             </div>
           </div>
+
+          {/* Memories Gallery */}
+          {memories.length > 0 && (
+            <div style={{ marginTop: '4rem' }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-primary)' }}>
+                Past Memories & Glimpses
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
+                {memories.map(memory => (
+                  <div key={memory.id} className="card glass-panel" style={{ overflow: 'hidden', aspectRatio: '1', padding: 0, background: '#000', borderRadius: 'var(--radius-lg)' }}>
+                    {memory.media_type === 'video' ? (
+                      <video 
+                        src={memory.media_url} 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        muted loop autoPlay playsInline 
+                      />
+                    ) : (
+                      <img 
+                        src={memory.media_url} 
+                        alt="Club Memory" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }} 
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

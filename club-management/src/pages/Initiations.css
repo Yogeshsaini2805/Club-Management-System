@@ -1,0 +1,63 @@
+/* ============================================
+   INITIATIONS — Initiations Page Styles
+   ============================================
+*/
+
+.initiations-page {
+  padding-top: 3rem;
+  padding-bottom: 5rem;
+}
+
+.initiations-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.initiations-empty {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.initiations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.initiation-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.initiation-card-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.initiation-card-title {
+  margin: 0;
+}
+
+.initiation-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.initiation-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.initiation-card-btn {
+  width: 100%;
+  justify-content: center;
+}

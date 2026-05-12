@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 import { Link } from 'react-router-dom';
 import { Users, UserCheck } from 'lucide-react';
+import ErrorBanner from '../components/common/ErrorBanner';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import './Initiations.css';
 
 const Initiations = () => {
   const [initiations, setInitiations] = useState([]);
@@ -28,8 +31,8 @@ const Initiations = () => {
   }, []);
 
   return (
-    <div className="container" style={{ paddingTop: '3rem', paddingBottom: '5rem' }}>
-      <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+    <div className="container initiations-page">
+      <div className="initiations-header">
         <h1 className="section-title">University Initiations</h1>
         <p className="section-subtitle">
           Join newly forming groups and help build the foundation of tomorrow's top clubs.
@@ -37,41 +40,38 @@ const Initiations = () => {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center' }}>Loading initiations...</div>
+        <LoadingSpinner message="Loading initiations..." />
       ) : error ? (
-        <div style={{ maxWidth: '600px', margin: '2rem auto', padding: '1.5rem', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '16px', textAlign: 'center', color: '#dc2626' }}>
-          <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{error}</p>
-          <button onClick={() => window.location.reload()} style={{ padding: '0.5rem 1.5rem', background: '#dc2626', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 600, marginTop: '0.5rem' }}>Retry</button>
-        </div>
+        <ErrorBanner message={error} onRetry={() => window.location.reload()} />
       ) : initiations.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No initiations available at the moment.</div>
+        <div className="initiations-empty">No initiations available at the moment.</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2rem' }}>
+        <div className="initiations-grid">
           {initiations.map(initiation => (
             <div key={initiation.id} className="card glass-panel">
               <div className="card-body">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <img src={initiation.logo || "https://via.placeholder.com/150"} alt={initiation.name} style={{ width: '60px', height: '60px', borderRadius: '12px', objectFit: 'cover' }} />
+                <div className="initiation-card-header">
+                  <img src={initiation.logo || "https://via.placeholder.com/150"} alt={initiation.name} className="initiation-card-logo" />
                   <div>
-                    <h3 className="card-title" style={{ margin: 0 }}>{initiation.name}</h3>
+                    <h3 className="card-title initiation-card-title">{initiation.name}</h3>
                     <span className="badge badge-success">{initiation.category}</span>
                   </div>
                 </div>
                 
                 <p className="card-text">{initiation.description}</p>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div className="initiation-card-meta">
+                  <div className="initiation-card-meta-item">
                     <UserCheck size={16} color="var(--accent-primary)" />
                     <span><strong>Head:</strong> {initiation.student_head}</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="initiation-card-meta-item">
                     <Users size={16} color="var(--accent-secondary)" />
                     <span><strong>Faculty:</strong> {initiation.faculty_head}</span>
                   </div>
                 </div>
                 
-                <Link to={`/initiations/${initiation.id}`} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
+                <Link to={`/initiations/${initiation.id}`} className="btn btn-outline initiation-card-btn">
                   View Details & Apply
                 </Link>
               </div>

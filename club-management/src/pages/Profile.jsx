@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { API_BASE_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Shield, KeyRound, Save, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { User, Mail, Shield, KeyRound, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import Modal from '../components/common/Modal';
 import './Profile.css';
 
 const Profile = () => {
@@ -59,7 +60,6 @@ const Profile = () => {
         setMessage({ text: data.detail || 'Failed to change password.', type: 'error' });
       }
     } catch (err) {
-      // Fallback for mock data (when backend is not running)
       setMessage({ text: 'Unable to connect to backend server. Make sure Python FastAPI is running.', type: 'error' });
     } finally {
       setIsLoading(false);
@@ -69,14 +69,13 @@ const Profile = () => {
   if (!user) return null;
 
   return (
-    <div className="container" style={{ paddingTop: '3rem', paddingBottom: '5rem', position: 'relative' }}>
-      {/* Decorative background blurs specifically for profile */}
-      <div style={{ position: 'absolute', top: '5%', right: '10%', width: '300px', height: '300px', background: 'var(--accent-primary)', filter: 'blur(120px)', opacity: 0.15, borderRadius: '50%', zIndex: -1 }}></div>
-      <div style={{ position: 'absolute', bottom: '10%', left: '5%', width: '250px', height: '250px', background: 'var(--accent-tertiary)', filter: 'blur(100px)', opacity: 0.15, borderRadius: '50%', zIndex: -1 }}></div>
+    <div className="container profile-page">
+      <div className="profile-bg-shape-1"></div>
+      <div className="profile-bg-shape-2"></div>
       
-      <div style={{ textAlign: 'center', marginBottom: '4rem', position: 'relative', zIndex: 1 }}>
-        <h1 className="section-title" style={{ fontSize: '3.5rem', textShadow: '0 0 30px rgba(255,255,255,0.1)' }}>My Profile</h1>
-        <p className="section-subtitle" style={{ fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto' }}>Manage your account details and security settings.</p>
+      <div className="profile-header-section">
+        <h1 className="section-title profile-page-title">My Profile</h1>
+        <p className="section-subtitle profile-page-subtitle">Manage your account details and security settings.</p>
       </div>
 
       <div className="profile-grid">
@@ -118,11 +117,11 @@ const Profile = () => {
         </div>
 
         {/* Change Password Section */}
-        <div className="card glass-panel password-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-          <div className="password-header" style={{ marginBottom: '1rem', justifyContent: 'center' }}>
+        <div className="card glass-panel password-card">
+          <div className="password-header">
             <KeyRound size={32} className="text-gradient" />
           </div>
-          <h3 style={{ marginBottom: '0.5rem' }}>Account Security</h3>
+          <h3>Account Security</h3>
           <p className="text-muted mb-2">
             Update your password to keep your account secure.
           </p>
@@ -132,77 +131,67 @@ const Profile = () => {
         </div>
       </div>
 
-      {showPasswordModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div className="card glass-panel" style={{ width: '90%', maxWidth: '500px', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-               <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.8rem' }}>
-                 <KeyRound size={24} className="text-gradient" />
-                 Change Password
-               </h2>
-               <button onClick={() => setShowPasswordModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                 <X size={24} />
-               </button>
-            </div>
-            
-            {message.text && (
-              <div className={`alert alert-${message.type}`}>
-                {message.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
-                {message.text}
-              </div>
-            )}
-
-            <form onSubmit={handlePasswordChange} className="password-form" style={{ maxWidth: '100%' }}>
-              <div className="form-group">
-                <label className="form-label">Current Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  placeholder="Enter current password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  required 
-                />
-              </div>
-              
-              <div className="form-group">
-                <label className="form-label">New Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required 
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Confirm New Password</label>
-                <input 
-                  type="password" 
-                  className="form-control" 
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required 
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowPasswordModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={isLoading} style={{ flex: 1 }}>
-                  <Save size={18} /> {isLoading ? 'Saving...' : 'Update Password'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setMessage({ text: '', type: '' });
+        }}
+        title="Change Password"
+        maxWidth="500px"
+      >
+        {message.text && (
+          <div className={`alert alert-${message.type}`}>
+            {message.type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}
+            {message.text}
           </div>
-        </div>
-      )}
+        )}
+
+        <form onSubmit={handlePasswordChange} className="password-form">
+          <div className="form-group">
+            <label className="form-label">Current Password</label>
+            <input 
+              type="password" 
+              className="form-control" 
+              placeholder="Enter current password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              required 
+            />
+          </div>
+          
+          <div className="form-group">
+            <label className="form-label">New Password</label>
+            <input 
+              type="password" 
+              className="form-control" 
+              placeholder="Enter new password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required 
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Confirm New Password</label>
+            <input 
+              type="password" 
+              className="form-control" 
+              placeholder="Confirm new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required 
+            />
+          </div>
+
+          <div className="password-form-actions">
+            <button type="button" className="btn btn-secondary" onClick={() => setShowPasswordModal(false)}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              <Save size={18} /> {isLoading ? 'Saving...' : 'Update Password'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

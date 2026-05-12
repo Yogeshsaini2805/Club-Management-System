@@ -1,0 +1,74 @@
+/* ============================================
+   CLUBS — Clubs Page Styles
+   ============================================
+*/
+
+.clubs-page {
+  padding-top: 3rem;
+  padding-bottom: 5rem;
+}
+
+.clubs-header {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.clubs-loading {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.clubs-empty {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.clubs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 2rem;
+}
+
+.club-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.club-card-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.club-card-title {
+  margin: 0;
+}
+
+.club-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.club-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.club-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.club-card-btn {
+  width: 100%;
+  justify-content: center;
+}

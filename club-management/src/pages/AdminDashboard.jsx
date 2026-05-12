@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, ShieldAlert, Trash2, Calendar, Users, CalendarPlus, Edit2 } from 'lucide-react';
+import { BarChart2, Calendar, Image, ShieldAlert, TrendingUp, UserCheck, Users, CheckCircle } from 'lucide-react';
+import ManageOrganizations from '../components/admin/ManageOrganizations';
+import ManageEvents from '../components/admin/ManageEvents';
+import ManageMemories from '../components/admin/ManageMemories';
+import ManageRegistrations from '../components/admin/ManageRegistrations';
 import { API_BASE_URL } from '../config';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import './AdminDashboard.css';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -15,6 +21,7 @@ const AdminDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEventSubmitting, setIsEventSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [activeSection, setActiveSection] = useState(null); // 'organizations', 'events', 'memories'
 
   const [editingClubId, setEditingClubId] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
@@ -40,6 +47,8 @@ const AdminDashboard = () => {
     title: '',
     date: '',
     time: '',
+    end_date: '',
+    end_time: '',
     venue: '',
     description: '',
     club_id: ''
@@ -49,6 +58,26 @@ const AdminDashboard = () => {
   const [registrations, setRegistrations] = useState([]);
   const [selectedRegType, setSelectedRegType] = useState('club');
   const [selectedRegId, setSelectedRegId] = useState('');
+  const [updatingStatusId, setUpdatingStatusId] = useState(null);
+  
+  // Memories State
+  const [memories, setMemories] = useState([]);
+  const [memoryFile, setMemoryFile] = useState(null);
+  const [memoryFormData, setMemoryFormData] = useState({ club_id: '', media_url: '' });
+  const [isMemorySubmitting, setIsMemorySubmitting] = useState(false);
+  const [deletingMemoryId, setDeletingMemoryId] = useState(null);
+  
+  // Fetch memories when club_id changes
+  useEffect(() => {
+    if (memoryFormData.club_id) {
+      fetch(`${API_BASE_URL}/clubs/${memoryFormData.club_id}/memories`)
+        .then(res => res.json())
+        .then(data => setMemories(Array.isArray(data) ? data : []))
+        .catch(err => console.error(err));
+    } else {
+      setMemories([]);
+    }
+  }, [memoryFormData.club_id]);
   
   useEffect(() => {
     if (!selectedRegId) {
@@ -57,10 +86,19 @@ const AdminDashboard = () => {
     }
     const fetchRegs = async () => {
       try {
-        const url = selectedRegType === 'club' 
-          ? `${API_BASE_URL}/clubs/${selectedRegId}/applications`
-          : `${API_BASE_URL}/events/${selectedRegId}/registrations`;
-        const res = await fetch(url);
+        let url;
+        const headers = {
+          'X-User-Id': String(user?.id || ''),
+          'X-User-Role': user?.role || ''
+        };
+        if (selectedRegType === 'club') {
+          url = `${API_BASE_URL}/clubs/${selectedRegId}/applications`;
+        } else if (selectedRegType === 'event') {
+          url = `${API_BASE_URL}/events/${selectedRegId}/registrations`;
+        } else if (selectedRegType === 'members') {
+          url = `${API_BASE_URL}/clubs/${selectedRegId}/members`;
+        }
+        const res = await fetch(url, { headers });
         if (res.ok) {
           setRegistrations(await res.json());
         } else {
@@ -71,8 +109,70 @@ const AdminDashboard = () => {
       }
     };
     fetchRegs();
-  }, [selectedRegId, selectedRegType]);
+  }, [selectedRegId, selectedRegType, user]);
   const [eventMessage, setEventMessage] = useState({ text: '', type: '' });
+
+  const handleStatusUpdate = async (id, newStatus) => {
+    if (newStatus === 'rejected' && !window.confirm('Are you sure you want to reject this registration?')) return;
+    setUpdatingStatusId(id);
+    try {
+      const endpoint = selectedRegType === 'club'
+        ? `${API_BASE_URL}/applications/${id}/status`
+        : `${API_BASE_URL}/event-registrations/${id}/status`;
+      const res = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': String(user?.id || ''),
+          'X-User-Role': user?.role || ''
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setRegistrations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+        fetchData();
+      } else {
+        const errData = await res.json().catch(() => ({ detail: 'Update failed' }));
+        alert(errData.detail || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error('Failed to update status', err);
+      alert('Network error while updating status');
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
+
+  const handleDeleteRegistration = async (id) => {
+    if (!window.confirm('Are you sure you want to permanently delete this record? This action cannot be undone.')) return;
+    setUpdatingStatusId(id);
+    try {
+      const endpoint = selectedRegType === 'club'
+        ? `${API_BASE_URL}/applications/${id}`
+        : `${API_BASE_URL}/event-registrations/${id}`;
+      
+      const res = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': String(user?.id || ''),
+          'X-User-Role': user?.role || ''
+        }
+      });
+
+      if (res.ok) {
+        setRegistrations(prev => prev.filter(r => r.id !== id));
+        fetchData();
+      } else {
+        const errData = await res.json().catch(() => ({ detail: 'Delete failed' }));
+        alert(errData.detail || 'Failed to delete record');
+      }
+    } catch (err) {
+      console.error('Failed to delete registration', err);
+      alert('Network error while deleting registration');
+    } finally {
+      setUpdatingStatusId(null);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -108,6 +208,100 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleMemorySubmit = async (e) => {
+    e.preventDefault();
+    if (!memoryFormData.club_id) {
+      setMessage({ text: 'Please select an organization first', type: 'error' });
+      return;
+    }
+    if (!memoryFile && !memoryFormData.media_url) {
+      setMessage({ text: 'Please provide a file or a URL', type: 'error' });
+      return;
+    }
+
+    setIsMemorySubmitting(true);
+    try {
+      let finalMediaUrl = memoryFormData.media_url;
+      let finalMediaType = 'image'; // Default for external URLs unless it ends in mp4
+      
+      if (finalMediaUrl && finalMediaUrl.match(/\.(mp4|webm|ogg)$/i)) {
+        finalMediaType = 'video';
+      }
+
+      if (memoryFile) {
+        const fileData = new FormData();
+        fileData.append('file', memoryFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/upload-media`, {
+          method: 'POST',
+          body: fileData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          finalMediaUrl = uploadData.media_url;
+          finalMediaType = uploadData.media_type;
+        } else {
+          throw new Error('Media upload failed');
+        }
+      }
+
+      const club = clubs.find(c => String(c.id) === String(memoryFormData.club_id));
+      
+      const res = await fetch(`${API_BASE_URL}/clubs/${memoryFormData.club_id}/memories`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-User-Id': String(user?.id || ''),
+          'X-User-Role': String(user?.role || '')
+        },
+        body: JSON.stringify({
+          club_id: parseInt(memoryFormData.club_id),
+          club_name: club ? club.name : 'Unknown Club',
+          media_url: finalMediaUrl,
+          media_type: finalMediaType
+        })
+      });
+
+      if (res.ok) {
+        setMessage({ text: 'Memory added successfully!', type: 'success' });
+        setMemoryFile(null);
+        setMemoryFormData({ ...memoryFormData, media_url: '' });
+        // Refresh memories
+        const memRes = await fetch(`${API_BASE_URL}/clubs/${memoryFormData.club_id}/memories`);
+        setMemories(await memRes.json());
+      } else {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to add memory');
+      }
+    } catch (err) {
+      setMessage({ text: err.message, type: 'error' });
+    } finally {
+      setIsMemorySubmitting(false);
+    }
+  };
+
+  const handleMemoryDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this memory?')) return;
+    setDeletingMemoryId(id);
+    try {
+      const res = await fetch(`${API_BASE_URL}/memories/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-User-Id': String(user?.id || ''),
+          'X-User-Role': String(user?.role || '')
+        }
+      });
+      if (res.ok) {
+        setMemories(memories.filter(m => m.id !== id));
+      } else {
+        throw new Error('Failed to delete memory');
+      }
+    } catch (err) {
+      setMessage({ text: err.message, type: 'error' });
+    } finally {
+      setDeletingMemoryId(null);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     const val = name === 'member_count' ? parseInt(value) || 0 : value;
@@ -115,7 +309,14 @@ const AdminDashboard = () => {
   };
 
   const handleEventChange = (e) => {
-    setEventFormData({ ...eventFormData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    const newData = { ...eventFormData, [name]: value };
+    
+    // Auto-fill end_date when start date is picked if end_date is currently empty
+    if (name === 'date' && !eventFormData.end_date) {
+      newData.end_date = value;
+    }
+    setEventFormData(newData);
   };
 
   const handleSubmit = async (e) => {
@@ -173,7 +374,7 @@ const AdminDashboard = () => {
       });
       
       if (response.ok) {
-        setMessage({ text: `Successfully ${editingClubId ? 'updated' : 'added'} ${formData.name}!`, type: 'success' });
+        setMessage({ text: `Successfully \${editingClubId ? 'updated' : 'added'} \${formData.name}!`, type: 'success' });
         setFormData({
           name: '', category: 'Club', description: '', student_head: '', faculty_head: '', core_team: '', student_email: '', faculty_email: '', logo: 'https://via.placeholder.com/150/1e293b/ffffff?text=C', banner_image: '', member_count: 0
         });
@@ -204,12 +405,25 @@ const AdminDashboard = () => {
 
     setIsEventSubmitting(true);
     try {
-      const combinedDate = `${eventFormData.date}T${eventFormData.time}:00`;
+      const combinedDate = `\${eventFormData.date}T\${eventFormData.time}:00`;
+      
+      let combinedEndDate = null;
+      if (eventFormData.end_date && eventFormData.end_time) {
+        combinedEndDate = `\${eventFormData.end_date}T\${eventFormData.end_time}:00`;
+      } else if (eventFormData.date && eventFormData.time) {
+        // Fallback: If no end time given, assume 3 hours later on the same day or selected end date
+        const startDateObj = new Date(combinedDate);
+        startDateObj.setHours(startDateObj.getHours() + 3);
+        const autoEndDate = eventFormData.end_date || eventFormData.date;
+        const autoEndTime = startDateObj.toISOString().split('T')[1].substring(0, 5);
+        combinedEndDate = `${autoEndDate}T${autoEndTime}:00`;
+      }
       
       const payload = {
         title: eventFormData.title,
         description: eventFormData.description,
         date: combinedDate,
+        end_date: combinedEndDate,
         venue: eventFormData.venue,
         type: 'upcoming',
         club_id: parseInt(eventFormData.club_id)
@@ -229,9 +443,9 @@ const AdminDashboard = () => {
       });
       
       if (response.ok) {
-        setEventMessage({ text: `Successfully ${editingEventId ? 'updated' : 'added'} ${eventFormData.title}!`, type: 'success' });
+        setEventMessage({ text: `Successfully \${editingEventId ? 'updated' : 'added'} \${eventFormData.title}!`, type: 'success' });
         setEventFormData({
-          title: '', date: '', time: '', venue: '', description: '', club_id: ''
+          title: '', date: '', time: '', end_date: '', end_time: '', venue: '', description: '', club_id: ''
         });
         setEditingEventId(null);
         fetchData();
@@ -249,9 +463,9 @@ const AdminDashboard = () => {
 
   const handleDeleteClub = async (id) => {
     if (!window.confirm("Are you sure you want to delete this club? All its events will also be deleted.")) return;
-    setDeletingId(`club-${id}`);
+    setDeletingId(`club-\${id}`);
     try {
-      const res = await fetch(`${API_BASE_URL}/clubs/${id}`, { 
+      const res = await fetch(`${API_BASE_URL}/clubs/\${id}`, { 
         method: 'DELETE',
         headers: {
           'X-User-Id': String(user?.id || ''),
@@ -269,9 +483,9 @@ const AdminDashboard = () => {
 
   const handleDeleteEvent = async (id) => {
     if (!window.confirm("Are you sure you want to delete this event?")) return;
-    setDeletingId(`event-${id}`);
+    setDeletingId(`event-\${id}`);
     try {
-      const res = await fetch(`${API_BASE_URL}/events/${id}`, { 
+      const res = await fetch(`${API_BASE_URL}/events/\${id}`, { 
         method: 'DELETE',
         headers: {
           'X-User-Id': String(user?.id || ''),
@@ -310,23 +524,24 @@ const AdminDashboard = () => {
 
   const handleEditEvent = (event) => {
     setEditingEventId(event.id);
-    let d = '', t = '';
-    if (event.date) {
-      const parts = event.date.split('T');
-      if (parts.length === 2) {
-        d = parts[0];
-        t = parts[1].substring(0, 5);
-      } else {
-        d = event.date;
-      }
+    let d = '', t = '', ed = '', et = '';
+    if (event.date && event.date.includes('T')) {
+      [d, t] = event.date.split('T');
+      if (t) t = t.substring(0, 5); // ensure HH:mm
+    }
+    if (event.end_date && event.end_date.includes('T')) {
+      [ed, et] = event.end_date.split('T');
+      if (et) et = et.substring(0, 5);
     }
     setEventFormData({
-      title: event.title || '',
+      title: event.title,
       date: d,
       time: t,
+      end_date: ed,
+      end_time: et,
       venue: event.venue || '',
-      description: event.description || '',
-      club_id: event.club_id || ''
+      description: event.description,
+      club_id: event.club_id
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -348,326 +563,241 @@ const AdminDashboard = () => {
      return club && (String(club.admin_id) === String(user?.id) || club.student_email === user?.email);
   });
 
+  // Calculate Aggregates
+  const totalOrganizations = visibleClubs.length;
+  const totalEvents = visibleEvents.length;
+  const totalStudents = visibleClubs.reduce((acc, club) => acc + (club.member_count || 0), 0);
+  const totalMemories = memories.length; // Approximate, as we only fetch memories per club right now. Ideally fetched globally.
+
+  // Donut Chart Data (Group by Category)
+  const categoryCounts = visibleClubs.reduce((acc, club) => {
+    const cat = club.category || 'Other';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+  const donutData = Object.keys(categoryCounts).map(key => ({ name: key, value: categoryCounts[key] }));
+  const COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+
+  const recentEvents = [...visibleEvents]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 4);
+
+  const toggleSection = (section) => {
+    setActiveSection(prev => prev === section ? null : section);
+  };
+
   return (
-    <div className="container" style={{ paddingTop: '3rem', paddingBottom: '5rem' }}>
-      <h1 className="section-title" style={{ textAlign: 'left', marginBottom: '2rem' }}>Admin Dashboard</h1>
+    <div className="container admin-dashboard" style={{ paddingTop: '3rem', paddingBottom: '5rem' }}>
       
-      <div style={{ display: 'grid', gap: '2rem', gridTemplateColumns: '1fr 1fr' }}>
+      {/* 1. WELCOME BANNER */}
+      <div className="admin-welcome-banner">
+        <div>
+          <h1 className="admin-greeting">Welcome back, {user?.name || 'Admin'}!</h1>
+          <p className="admin-subtitle">Here's what's happening with your club portal today.</p>
+        </div>
+        <div className="admin-date-picker">
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          <Calendar size={18} />
+        </div>
+      </div>
+
+      {/* 2. STAT CARDS */}
+      <div className="admin-stat-grid">
+        <div className="admin-stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}><Users size={24} /></div>
+          <p className="stat-label">Total Organizations</p>
+          <h3 className="stat-value">{totalOrganizations}</h3>
+          <p className="stat-trend"><TrendingUp size={14} /> <span>12%</span> from last month</p>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}><Calendar size={24} /></div>
+          <p className="stat-label">Total Events</p>
+          <h3 className="stat-value">{totalEvents}</h3>
+          <p className="stat-trend"><TrendingUp size={14} /> <span>18%</span> from last month</p>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}><UserCheck size={24} /></div>
+          <p className="stat-label">Total Students</p>
+          <h3 className="stat-value">{totalStudents}</h3>
+          <p className="stat-trend"><TrendingUp size={14} /> <span>15%</span> from last month</p>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-icon-wrapper" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}><Image size={24} /></div>
+          <p className="stat-label">Total Memories</p>
+          <h3 className="stat-value">{totalMemories}</h3>
+          <p className="stat-trend"><TrendingUp size={14} /> <span>10%</span> from last month</p>
+        </div>
+      </div>
+
+      {/* 3. OVERVIEW ROW */}
+      <div className="admin-overview-grid">
+        <div className="admin-card">
+          <div className="admin-card-header">
+            <h3>Recent Events</h3>
+            <button className="btn-text">View All</button>
+          </div>
+          <div className="recent-events-list">
+            {recentEvents.length === 0 ? <p className="text-muted">No recent events.</p> : recentEvents.map((ev, idx) => {
+              const evDate = new Date(ev.date);
+              const isPast = evDate < new Date();
+              return (
+                <div key={idx} className="recent-event-item">
+                  <div className="recent-event-icon" style={{ background: isPast ? 'rgba(59, 130, 246, 0.1)' : 'rgba(236, 72, 153, 0.1)', color: isPast ? '#3b82f6' : '#ec4899' }}>
+                    {isPast ? <CheckCircle size={18} /> : <Calendar size={18} />}
+                  </div>
+                  <div className="recent-event-details">
+                    <h4>{ev.title}</h4>
+                    <p>{evDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {ev.venue || 'TBA'}</p>
+                  </div>
+                  <span className={`status-badge \${isPast ? 'completed' : 'upcoming'}`}>{isPast ? 'Completed' : 'Upcoming'}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="admin-card">
+          <div className="admin-card-header">
+            <h3>Organizations Overview</h3>
+            <button className="btn-text">View All</button>
+          </div>
+          <div className="donut-chart-container">
+            {donutData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={donutData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {donutData.map((entry, index) => <Cell key={`cell-\${index}`} fill={COLORS[index % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-muted" style={{ textAlign: 'center', marginTop: '2rem' }}>No data available.</p>
+            )}
+            <div className="donut-center-text">
+              <h2>{totalOrganizations}</h2>
+              <p>Total</p>
+            </div>
+            <div className="donut-legend">
+              {donutData.map((entry, idx) => (
+                <div key={idx} className="legend-item">
+                  <span className="legend-color" style={{ background: COLORS[idx % COLORS.length] }}></span>
+                  <span className="legend-label">{entry.name}</span>
+                  <span className="legend-value">{entry.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. QUICK ACTIONS ROW */}
+      <div className="admin-quick-actions">
+        <div className={`quick-action-card orgs \${activeSection === 'organizations' ? 'active' : ''}`}>
+          <div className="qa-icon"><BarChart2 size={24} /></div>
+          <h3>Manage Organizations</h3>
+          <p>Add, update and manage all club and initiative organizations.</p>
+          <button className="btn-qa" onClick={() => toggleSection('organizations')}>
+            {activeSection === 'organizations' ? 'Close Section' : 'Manage Now'}
+          </button>
+        </div>
         
-        {/* ADD FORMS COLUMN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          {/* ADD ORGANIZATION FORM */}
-          {(user?.role === 'admin' || editingClubId) && (
-          <div className="card glass-panel">
-            <div className="card-body">
-              <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <PlusCircle size={24} color="var(--accent-primary)" />
-                {editingClubId ? 'Update Organization' : 'Add Organization'}
-              </h2>
-
-              {message.text && (
-                <div style={{ background: message.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid var(--${message.type === 'success' ? 'success' : 'danger'})`, color: `var(--${message.type === 'success' ? 'success' : 'danger'})`, padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
-                  {message.text}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Organization Name</label>
-                  <input type="text" className="form-control" name="name" value={formData.name} onChange={handleChange} required />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Type</label>
-                  <select className="form-control" name="category" value={formData.category} onChange={handleChange}>
-                    <option value="Club">Club</option>
-                    <option value="Initiation">Initiation</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Description</label>
-                  <textarea className="form-control" name="description" value={formData.description} onChange={handleChange} rows="2" required></textarea>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Core Team</label>
-                    <input type="text" className="form-control" name="core_team" placeholder="e.g. Alice (VP), Bob (Sec)" value={formData.core_team} onChange={handleChange} />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Total Students / Members</label>
-                    <input type="number" className="form-control" name="member_count" value={formData.member_count} onChange={handleChange} min="0" />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Upload Logo (Optional)</label>
-                    <input type="file" className="form-control" accept="image/*" onChange={(e) => setLogoFile(e.target.files[0])} />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Upload Banner (Optional)</label>
-                    <input type="file" className="form-control" accept="image/*" onChange={(e) => setBannerFile(e.target.files[0])} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Student Head</label>
-                    <input type="text" className="form-control" name="student_head" value={formData.student_head} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Student Email</label>
-                    <input type="email" className="form-control" name="student_email" placeholder="e.g. head@jecrcu.edu.in" value={formData.student_email} onChange={handleChange} />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Faculty Advisor</label>
-                    <input type="text" className="form-control" name="faculty_head" value={formData.faculty_head} onChange={handleChange} required />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Faculty Email</label>
-                    <input type="email" className="form-control" name="faculty_email" placeholder="e.g. advisor@jecrcu.edu.in" value={formData.faculty_email} onChange={handleChange} />
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem' }}>
-                  <button type="submit" className="btn btn-primary" style={{flex: 1, opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer'}} disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : (editingClubId ? 'Update Organization' : 'Add Organization')}
-                  </button>
-                  {editingClubId && user?.role === 'admin' && (
-                    <button type="button" className="btn btn-secondary" style={{flex: 1}} onClick={() => {
-                      setEditingClubId(null);
-                      setFormData({name: '', category: 'Club', description: '', student_head: '', faculty_head: '', core_team: '', student_email: '', faculty_email: '', logo: 'https://via.placeholder.com/150/1e293b/ffffff?text=C', banner_image: '', member_count: 0});
-                      setLogoFile(null);
-                      setBannerFile(null);
-                    }}>Cancel Edit</button>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-
-          )}
-
-          {/* ADD EVENT FORM */}
-          <div className="card glass-panel">
-            <div className="card-body">
-              <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CalendarPlus size={24} color="var(--accent-secondary)" />
-                {editingEventId ? 'Update Event' : 'Add Event'}
-              </h2>
-
-              {eventMessage.text && (
-                <div style={{ background: eventMessage.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid var(--${eventMessage.type === 'success' ? 'success' : 'danger'})`, color: `var(--${eventMessage.type === 'success' ? 'success' : 'danger'})`, padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
-                  {eventMessage.text}
-                </div>
-              )}
-
-              <form onSubmit={handleEventSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Event Title</label>
-                  <input type="text" className="form-control" name="title" value={eventFormData.title} onChange={handleEventChange} required />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Hosting Organization</label>
-                  <select className="form-control" name="club_id" value={eventFormData.club_id} onChange={handleEventChange} required>
-                    <option value="" disabled>Select an Organization</option>
-                    {visibleClubs.map(c => <option key={c.id} value={c.id}>{c.name} ({c.category})</option>)}
-                  </select>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Date</label>
-                    <input type="date" className="form-control" name="date" value={eventFormData.date} onChange={handleEventChange} required />
-                  </div>
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label">Time</label>
-                    <input type="time" className="form-control" name="time" value={eventFormData.time} onChange={handleEventChange} required />
-                  </div>
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Venue Location</label>
-                  <input type="text" className="form-control" name="venue" placeholder="e.g. Main Auditorium" value={eventFormData.venue} onChange={handleEventChange} required />
-                </div>
-
-                <div className="form-group" style={{ margin: 0 }}>
-                  <label className="form-label">Description</label>
-                  <textarea className="form-control" name="description" value={eventFormData.description} onChange={handleEventChange} rows="2" required></textarea>
-                </div>
-
-                <div style={{ marginTop: '0.5rem' }}>
-                  <button type="submit" className="btn btn-secondary" style={{width: '100%', opacity: isEventSubmitting ? 0.7 : 1, cursor: isEventSubmitting ? 'not-allowed' : 'pointer'}} disabled={isEventSubmitting}>{isEventSubmitting ? 'Saving...' : (editingEventId ? 'Update Event' : 'Create Event')}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
+        <div className={`quick-action-card events \${activeSection === 'events' ? 'active' : ''}`}>
+          <div className="qa-icon"><Calendar size={24} /></div>
+          <h3>Manage Events</h3>
+          <p>Create, edit and manage all upcoming and past events.</p>
+          <button className="btn-qa" onClick={() => toggleSection('events')}>
+            {activeSection === 'events' ? 'Close Section' : 'Manage Now'}
+          </button>
         </div>
 
-        {/* MANAGEMENT LISTS COLUMN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
-          <div className="card glass-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            <div className="card-body">
-              <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={20} color="var(--accent-primary)" />
-                Manage Organizations
-              </h2>
-              {loading ? <p>Loading...</p> : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {visibleClubs.map(club => (
-                    <li key={club.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid var(--border-light)' }}>
-                      <div>
-                        <strong style={{ display: 'block' }}>{club.name}</strong>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{club.category}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => handleEditClub(club)} className="btn btn-secondary btn-sm" style={{ padding: '0.4rem' }}>
-                          <Edit2 size={16} />
-                        </button>
-                        {user?.role === 'admin' && (
-                          <button onClick={() => handleDeleteClub(club.id)} className="btn btn-secondary btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.4rem', opacity: deletingId === `club-${club.id}` ? 0.5 : 1 }} disabled={deletingId === `club-${club.id}`}>
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                  {visibleClubs.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No clubs found.</p>}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className="card glass-panel" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            <div className="card-body">
-              <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Calendar size={20} color="var(--accent-primary)" />
-                Manage Events
-              </h2>
-              {loading ? <p>Loading...</p> : (
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                  {visibleEvents.map(event => {
-                    const host = clubs.find(c => c.id === event.club_id);
-                    let displayDate = event.date;
-                    try {
-                      if (event.date.includes('T')) {
-                        const d = new Date(event.date);
-                        if (!isNaN(d)) {
-                          displayDate = d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-                        }
-                      }
-                    } catch(e) {}
-
-                    return (
-                      <li key={event.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 0', borderBottom: '1px solid var(--border-light)' }}>
-                        <div>
-                          <strong style={{ display: 'block' }}>{event.title}</strong>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {displayDate} • {host ? host.name : 'Unknown Host'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button onClick={() => handleEditEvent(event)} className="btn btn-secondary btn-sm" style={{ padding: '0.4rem' }}>
-                            <Edit2 size={16} />
-                          </button>
-                          <button onClick={() => handleDeleteEvent(event.id)} className="btn btn-secondary btn-sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)', padding: '0.4rem', opacity: deletingId === `event-${event.id}` ? 0.5 : 1 }} disabled={deletingId === `event-${event.id}`}>
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                  {visibleEvents.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No events found.</p>}
-                </ul>
-              )}
-            </div>
-          </div>
-
+        <div className={`quick-action-card memories \${activeSection === 'memories' ? 'active' : ''}`}>
+          <div className="qa-icon"><Image size={24} /></div>
+          <h3>Glimpses & Memories</h3>
+          <p>Upload and manage event photos and memorable moments.</p>
+          <button className="btn-qa" onClick={() => toggleSection('memories')}>
+            {activeSection === 'memories' ? 'Close Section' : 'Manage Now'}
+          </button>
         </div>
       </div>
 
-      {/* REGISTRATIONS VIEWER */}
-      <div style={{ marginTop: '3rem' }}>
-        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '1.5rem', fontSize: '1.8rem' }}>Student Registrations</h2>
-        <div className="card glass-panel" style={{ padding: '2rem' }}>
-          
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-            <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
-              <label className="form-label">Registration Type</label>
-              <select 
-                className="form-control" 
-                value={selectedRegType} 
-                onChange={(e) => { setSelectedRegType(e.target.value); setSelectedRegId(''); }}
-              >
-                <option value="club">Club / Initiation Applications</option>
-                <option value="event">Event Registrations</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ margin: 0, flex: 2, minWidth: '300px' }}>
-              <label className="form-label">Select {selectedRegType === 'club' ? 'Organization' : 'Event'}</label>
-              <select 
-                className="form-control" 
-                value={selectedRegId} 
-                onChange={(e) => setSelectedRegId(e.target.value)}
-              >
-                <option value="">-- Select --</option>
-                {selectedRegType === 'club' 
-                  ? visibleClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
-                  : visibleEvents.map(e => <option key={e.id} value={e.id}>{e.title}</option>)
-                }
-              </select>
-            </div>
-          </div>
+      
+      {/* 5. TOGGLED FORMS SECTION */}
+{/* --- ORGANIZATIONS TAB --- */}
+{activeSection === 'organizations' && (
+  <ManageOrganizations
+    user={user}
+    visibleClubs={visibleClubs}
+    formData={formData}
+    handleChange={handleChange}
+    handleSubmit={handleSubmit}
+    setLogoFile={setLogoFile}
+    setBannerFile={setBannerFile}
+    editingClubId={editingClubId}
+    setEditingClubId={setEditingClubId}
+    setFormData={setFormData}
+    handleEditClub={handleEditClub}
+    handleDeleteClub={handleDeleteClub}
+    isSubmitting={isSubmitting}
+    message={message}
+    deletingId={deletingId}
+    loading={loading}
+  />
+)}
 
-          {!selectedRegId ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>Please select an organization or event to view registered students.</p>
-          ) : registrations.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>No students have registered yet.</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
-                    <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Name</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Roll No</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Branch</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Email</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-secondary)' }}>Message</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {registrations.map(reg => (
-                    <tr key={reg.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '1rem', fontWeight: 'bold' }}>{reg.user?.name || 'Unknown'}</td>
-                      <td style={{ padding: '1rem' }}>{reg.user?.roll_no || 'N/A'}</td>
-                      <td style={{ padding: '1rem' }}>{reg.user?.branch || 'N/A'}</td>
-                      <td style={{ padding: '1rem' }}>
-                        {reg.user?.email ? <a href={`mailto:${reg.user.email}`} style={{ color: 'var(--accent-primary)', textDecoration: 'none' }}>{reg.user.email}</a> : 'N/A'}
-                      </td>
-                      <td style={{ padding: '1rem', maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={reg.message}>
-                        {reg.message || <span style={{ color: 'var(--text-muted)' }}>None</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+{/* --- EVENTS TAB --- */}
+{activeSection === 'events' && (
+  <ManageEvents
+    user={user}
+    visibleClubs={visibleClubs}
+    visibleEvents={visibleEvents}
+    clubs={clubs}
+    eventFormData={eventFormData}
+    handleEventChange={handleEventChange}
+    handleEventSubmit={handleEventSubmit}
+    editingEventId={editingEventId}
+    setEditingEventId={setEditingEventId}
+    setEventFormData={setEventFormData}
+    handleEditEvent={handleEditEvent}
+    handleDeleteEvent={handleDeleteEvent}
+    isEventSubmitting={isEventSubmitting}
+    eventMessage={eventMessage}
+    deletingId={deletingId}
+    loading={loading}
+  />
+)}
 
-    </div>
-  );
+{/* --- MEMORIES TAB --- */}
+{activeSection === 'memories' && (
+  <ManageMemories
+    visibleClubs={visibleClubs}
+    memoryFormData={memoryFormData}
+    setMemoryFormData={setMemoryFormData}
+    setMemoryFile={setMemoryFile}
+    memoryFile={memoryFile}
+    handleMemorySubmit={handleMemorySubmit}
+    isMemorySubmitting={isMemorySubmitting}
+    memories={memories}
+    handleMemoryDelete={handleMemoryDelete}
+    deletingMemoryId={deletingMemoryId}
+  />
+)}
+
+{/* REGISTRATIONS VIEWER (Always visible at bottom) */}
+<ManageRegistrations
+  selectedRegType={selectedRegType}
+  setSelectedRegType={setSelectedRegType}
+  selectedRegId={selectedRegId}
+  setSelectedRegId={setSelectedRegId}
+  visibleEvents={visibleEvents}
+  visibleClubs={visibleClubs}
+  registrations={registrations}
+  handleStatusUpdate={handleStatusUpdate}
+  handleDeleteRegistration={handleDeleteRegistration}
+  updatingStatusId={updatingStatusId}
+/>
+</div>
+);
 };
 
 export default AdminDashboard;
-

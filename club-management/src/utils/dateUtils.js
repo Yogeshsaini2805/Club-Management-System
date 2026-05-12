@@ -82,6 +82,7 @@ export function getMonthDay(isoDate) {
 
 /**
  * Check if an event date is in the past.
+ * Legacy function: Returns true if the START date is in the past.
  */
 export function isEventPast(isoDate) {
   if (!isoDate) return false;
@@ -91,6 +92,30 @@ export function isEventPast(isoDate) {
     }
   } catch (e) { /* fall through */ }
   return false;
+}
+
+/**
+ * Get the precise status of an event: 'upcoming', 'running', or 'past'
+ */
+export function getEventStatus(startDate, endDate) {
+  if (!startDate || !startDate.includes('T')) return 'upcoming'; // Default fallback
+  
+  const now = new Date();
+  const start = new Date(startDate);
+  
+  // If there's an end date, use it
+  if (endDate && endDate.includes('T')) {
+    const end = new Date(endDate);
+    if (now > end) return 'past';
+    if (now >= start && now <= end) return 'running';
+    return 'upcoming';
+  }
+  
+  // If no end date, assume it lasts for 3 hours from start time
+  const estimatedEnd = new Date(start.getTime() + (3 * 60 * 60 * 1000));
+  if (now > estimatedEnd) return 'past';
+  if (now >= start && now <= estimatedEnd) return 'running';
+  return 'upcoming';
 }
 
 /**

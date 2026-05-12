@@ -6,10 +6,11 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.7);
-  z-index: 1000;
+  z-index: 1050; /* Above navbar */
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 1rem;
   animation: modalFadeIn 0.2s ease-out;
 }
 
@@ -21,7 +22,27 @@
 .modal-container {
   width: 90%;
   padding: 2rem;
+  max-height: 85vh; /* Form cannot be taller than 85% of screen */
+  overflow-y: auto; /* Scroll inside the form */
   animation: modalSlideUp 0.3s ease-out;
+}
+
+/* Scrollbar styling for the container */
+.modal-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15); /* Darker thumb since container is light */
+  border-radius: 3px;
+}
+
+.modal-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 @keyframes modalSlideUp {
