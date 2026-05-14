@@ -192,6 +192,7 @@ Club Management System/
 | POST | `/api/register` | Register new user |
 | POST | `/api/login` | User login |
 | POST | `/api/change-password` | Change password |
+| GET | `/api/me?user_id={id}` | Get current user with recalculated role |
 | PUT | `/api/users/{id}` | Update user profile |
 
 ### Clubs & Initiations
@@ -215,8 +216,22 @@ Club Management System/
 |--------|----------|-------------|
 | POST | `/api/applications` | Apply to a club |
 | GET | `/api/clubs/{id}/applications` | View club applications |
+| PUT | `/api/applications/{id}/status` | Approve/reject application (admin) |
+| DELETE | `/api/applications/{id}` | Delete an application (admin) |
+| GET | `/api/clubs/{id}/members` | View approved club members (admin) |
+| GET | `/api/clubs/{id}/event-registrations` | View all event registrations for a club (admin) |
 | POST | `/api/event-registrations` | Register for an event |
 | GET | `/api/events/{id}/registrations` | View event registrations |
+| PUT | `/api/event-registrations/{id}/status` | Approve/reject registration (admin) |
+| DELETE | `/api/event-registrations/{id}` | Delete a registration (admin) |
+
+### Club Memories
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/memories/recent` | Get recent memories across all clubs |
+| GET | `/api/clubs/{id}/memories` | Get all memories for a club |
+| POST | `/api/clubs/{id}/memories` | Add a memory to a club (admin) |
+| DELETE | `/api/memories/{id}` | Delete a memory (admin) |
 
 ---
 
@@ -227,6 +242,8 @@ Club Management System/
 | `student` | Browse clubs/events, apply/register, manage profile |
 | `club_admin` | All student capabilities + manage their own club & events |
 | `admin` | Full access — manage all clubs, events, and view all registrations |
+
+> **Dynamic Role Assignment:** The `club_admin` role is automatically granted when a user is assigned as the student head (`student_email`) of a club or initiation. It is automatically **revoked** when the user is no longer the head of **any** club — for example, if the admin assigns a different student head or deletes the club. Users who head multiple clubs retain `club_admin` until removed from all of them. The `admin` (super-admin) role is never affected by this mechanism.
 
 ---
 

@@ -31,6 +31,11 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     if not crud.verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
+    # Recalculate role to ensure it reflects current club head status
+    crud.recalculate_user_role(db, db_user.id)
+    db.commit()
+    db.refresh(db_user)
+    
     return {"message": "Login successful", "user": {
         "id": db_user.id,
         "name": db_user.name,
@@ -52,3 +57,27 @@ def change_password(request: schemas.UserChangePassword, db: Session = Depends(g
     
     crud.change_user_password(db=db, db_user=db_user, new_password=request.new_password)
     return {"message": "Password updated successfully"}
+
+
+@router.get("/me")
+def get_current_user(user_id: int, db: Session = Depends(get_db)):
+    """Return the latest user data with recalculated role.
+    Called by frontend on app mount to refresh cached session."""
+    from .. import models
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Recalculate role
+    crud.recalculate_user_role(db, db_user.id)
+    db.commit()
+    db.refresh(db_user)
+    
+    return {
+        "id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email,
+        "role": db_user.role,
+        "roll_no": db_user.roll_no,
+        "branch": db_user.branch
+    }

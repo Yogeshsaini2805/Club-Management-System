@@ -10,7 +10,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('jecrc_user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
+
+      // Refresh role from server to catch mid-session changes
+      if (parsed.id) {
+        fetch(`${API_BASE_URL}/me?user_id=${parsed.id}`)
+          .then(res => res.ok ? res.json() : null)
+          .then(freshUser => {
+            if (freshUser) {
+              setUser(freshUser);
+              localStorage.setItem('jecrc_user', JSON.stringify(freshUser));
+            }
+          })
+          .catch(() => {}); // Silently fail if backend is unreachable
+      }
     }
     setLoading(false);
   }, []);

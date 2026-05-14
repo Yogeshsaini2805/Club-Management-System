@@ -41,6 +41,20 @@ def change_user_password(db: Session, db_user: models.User, new_password: str):
     db.refresh(db_user)
     return db_user
 
+def recalculate_user_role(db: Session, user_id: int):
+    """Check if user is still admin of any club. If not, revert role to 'student'.
+    Never touches super-admin users (role='admin')."""
+    if not user_id:
+        return
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user or user.role == 'admin':  # Never touch super-admin
+        return
+    club_count = db.query(models.Club).filter(models.Club.admin_id == user_id).count()
+    if club_count == 0:
+        user.role = 'student'
+    else:
+        user.role = 'club_admin'
+
 def get_clubs(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Club).offset(skip).limit(limit).all()
 
@@ -65,19 +79,35 @@ def update_club(db: Session, club_id: int, club_update: schemas.ClubUpdate):
     if not db_club:
         return None
     
+    # Save old admin_id before any changes
+    old_admin_id = db_club.admin_id
+    
     update_data = club_update.dict(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_club, key, value)
         
     # Check if student_email was updated and matches a user
-    if 'student_email' in update_data and update_data['student_email']:
-        user = get_user_by_email(db, update_data['student_email'])
-        if user:
-            db_club.admin_id = user.id
-            if user.role == 'student':
-                user.role = 'club_admin'
+    if 'student_email' in update_data:
+        new_email = update_data['student_email']
+        if new_email:
+            user = get_user_by_email(db, new_email)
+            if user:
+                db_club.admin_id = user.id
+                if user.role == 'student':
+                    user.role = 'club_admin'
+            else:
+                db_club.admin_id = None
+        else:
+            # student_email was cleared
+            db_club.admin_id = None
     
     db.commit()
+    
+    # Recalculate the OLD admin's role (they may no longer head any club)
+    if old_admin_id and old_admin_id != db_club.admin_id:
+        recalculate_user_role(db, old_admin_id)
+        db.commit()
+    
     db.refresh(db_club)
     return db_club
 
@@ -107,8 +137,13 @@ def create_event(db: Session, event: schemas.EventCreate):
 def delete_club(db: Session, club_id: int):
     db_club = db.query(models.Club).filter(models.Club.id == club_id).first()
     if db_club:
+        old_admin_id = db_club.admin_id
         db.delete(db_club)
         db.commit()
+        # Recalculate old head's role after club deletion
+        if old_admin_id:
+            recalculate_user_role(db, old_admin_id)
+            db.commit()
     return db_club
 
 def delete_event(db: Session, event_id: int):
